@@ -1,12 +1,41 @@
 package wordCount
 
+
+import java.io.{IOException, File}
+
+import org.apache.commons.io.FileUtils
+import org.apache.log4j.Logger
 import org.apache.spark.SparkContext._
 import org.apache.spark._
 
+
 object WordCount {
+
   def main(args: Array[String]) {
     val inputFile = args(0)
     val outputFile = args(1)
+    val logger  =  Logger.getLogger(getClass.getName)
+
+    //The HADOOP_HOME system variable should be set
+    //In this path /bin placed winutils.exe required
+
+    if(outputFile.length>0){
+       val file = new File(System.getProperty("user.dir")+"//"+outputFile)
+       logger.error("Directory: "+System.getProperty("user.dir")+"//"+outputFile)
+       if(file.isDirectory) {
+         try {
+           FileUtils.deleteDirectory(file)
+           logger.info("Directory deleted")
+         }
+         catch{
+           case ioe:IOException => logger.debug("Directory deletion is failed")
+         }
+       }
+       else{
+         logger.debug("No directory find")
+       }
+    }
+
     val conf = new SparkConf().setAppName("wordCount").setMaster("local")
     // Create a Scala Spark Context.
     val sc = new SparkContext(conf)
@@ -29,6 +58,7 @@ object WordCount {
     // Save the word count back out to a text file, causing evaluation.
     counts.saveAsTextFile(outputFile)
   }
+
 }
 
 
