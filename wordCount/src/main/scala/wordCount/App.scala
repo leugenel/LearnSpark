@@ -21,14 +21,14 @@ object WordCount {
 
     if(outputFile.length>0){
        val file = new File(System.getProperty("user.dir")+"//"+outputFile)
-       logger.error("Directory: "+System.getProperty("user.dir")+"//"+outputFile)
+       logger.info("Directory: "+System.getProperty("user.dir")+"//"+outputFile)
        if(file.isDirectory) {
          try {
            FileUtils.deleteDirectory(file)
            logger.info("Directory deleted")
          }
          catch{
-           case ioe:IOException => logger.debug("Directory deletion is failed")
+           case ioe:IOException => logger.error("Directory deletion is failed")
          }
        }
        else{
