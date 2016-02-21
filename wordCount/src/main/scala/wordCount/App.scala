@@ -7,40 +7,66 @@ import org.apache.commons.io.FileUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkContext._
 import org.apache.spark._
+import org.apache.spark.rdd.RDD
 
 
 object WordCount {
 
   def main(args: Array[String]) {
-    val inputFile = args(0)
-    val outputFile = args(1)
-    val logger  =  Logger.getLogger(getClass.getName)
+
+    object logger extends Serializable {
+      @transient lazy val log = Logger.getLogger(getClass.getName)
+    }
+
+    //val logger  =  Logger.getLogger(getClass.getName)
+    var inputFile  :String = null
+    var outputFile :String = null
+
+    args.length match {
+      case 0 => logger.log.error("No arguments are defined. Continue with the code defined.")
+
+      //assume that output file is defined
+      case 1 => outputFile = args(0)
+
+      case 2 => inputFile = args(0)
+                outputFile = args(1)
+      //default
+      case _ => logger.log.error("More arguments than expected. Exit.")
+                return
+    }
 
     //The HADOOP_HOME system variable should be set
     //In this path /bin placed winutils.exe required
 
-    if(outputFile.length>0){
+    if(outputFile!=null){
        val file = new File(System.getProperty("user.dir")+"//"+outputFile)
-       logger.info("Directory: "+System.getProperty("user.dir")+"//"+outputFile)
+       logger.log.info("Directory: "+System.getProperty("user.dir")+"//"+outputFile)
        if(file.isDirectory) {
          try {
            FileUtils.deleteDirectory(file)
-           logger.info("Directory deleted")
+           logger.log.info("Directory deleted")
          }
          catch{
-           case ioe:IOException => logger.error("Directory deletion is failed")
+           case ioe:IOException => logger.log.error("Directory deletion is failed")
          }
        }
        else{
-         logger.debug("No directory find")
+         logger.log.debug("No directory find")
        }
     }
 
     val conf = new SparkConf().setAppName("wordCount").setMaster("local")
     // Create a Scala Spark Context.
     val sc = new SparkContext(conf)
+
     // Load our input data.
-    val input =  sc.textFile(inputFile)
+    var input :RDD[String] = null
+    if(inputFile!=null) {
+       input = sc.textFile(inputFile)
+    }
+    else {
+       input = sc.parallelize(List("pandas", "i like pandas"))
+    }
     // Split up into words.
     val words = input.flatMap(line => line.split(" "))
     // Transform into word and count.
@@ -54,9 +80,12 @@ object WordCount {
     //In this way we sort by value
     val counts = words.map(word => (word, 1)).reduceByKey{case (x, y) => x + y}.map(item => item.swap).sortByKey()
 
+    counts.foreach((t) => logger.log.info("(" + t._1 + "," + t._2 + ")"))
 
     // Save the word count back out to a text file, causing evaluation.
-    counts.saveAsTextFile(outputFile)
+    if(outputFile!=null) {
+      counts.saveAsTextFile(outputFile)
+    }
   }
 
 }
