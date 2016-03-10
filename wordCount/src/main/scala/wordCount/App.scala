@@ -12,6 +12,7 @@ import org.apache.spark.rdd.RDD
 
 object WordCount {
 
+  //To work with input and output file need add to configuration program arguments Faust.txt output.txt
   def main(args: Array[String]) {
 
     object logger extends Serializable {
@@ -23,7 +24,7 @@ object WordCount {
     var outputFile :String = null
 
     args.length match {
-      case 0 => logger.log.error("No arguments are defined. Continue with the code defined.")
+      case 0 => logger.log.info("No arguments are defined. Continue with the code defined.")
 
       //assume that output file is defined
       case 1 => outputFile = args(0)
@@ -65,25 +66,31 @@ object WordCount {
        input = sc.textFile(inputFile)
     }
     else {
-       input = sc.parallelize(List("pandas", "i like pandas"))
+       input = sc.parallelize(List("pandas!", "i like pandas!!!"))
     }
-    // Split up into words.
-    val words = input.flatMap(line => line.split(" "))
+    // Split up into words. Use " ", "!" and other signs to split
+    val words = input.flatMap(line => line.split(" |\\!|\\.|\\:|\\;|\\,|\\)|\\("))
+
+
     // Transform into word and count.
 
     //Original
     //val counts = words.map(word => (word, 1)).reduceByKey{case (x, y) => x + y}
 
-    //Sort by value
-    //val counts = words.map(word => (word, 1)).reduceByKey{case (x, y) => x + y}.sortByKey()
+    //In this way we sort by value - doing swap and then sort
+    //Set filter to remove length>2
+    val counts = words.map(word =>
+                          (word, 1)).reduceByKey{case (x, y) => x + y}.map(item => item.swap).sortByKey().filter{case(x,y) => y.length>2}
 
-    //In this way we sort by value
-    val counts = words.map(word => (word, 1)).reduceByKey{case (x, y) => x + y}.map(item => item.swap).sortByKey()
+    //Lets print only words that length > 2 and not contains '.'
+    //val countsMore2 = counts.filter{case(x,y) => y.length>2 && !y.contains('.')}
 
+    //counts.foreach((t) => logger.log.info("(" + t._1 + "," + t._2 + ")"))
     counts.foreach((t) => logger.log.info("(" + t._1 + "," + t._2 + ")"))
 
     // Save the word count back out to a text file, causing evaluation.
     if(outputFile!=null) {
+      //counts.saveAsTextFile(outputFile)
       counts.saveAsTextFile(outputFile)
     }
   }
